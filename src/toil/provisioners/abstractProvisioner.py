@@ -519,8 +519,6 @@ class AbstractProvisioner(ABC):
                 }
             }
 
-            debugConfig = json.loads(json.dumps(config))
-
             if len(self.sshPublicKeys) > 0:
                 # Add SSH keys if needed
                 config['passwd'] = {
@@ -531,11 +529,6 @@ class AbstractProvisioner(ABC):
                         }
                     ]
                 }
-                debugConfig['passwd'] = {'users': [{'name': 'core', 'sshAuthorizedKeys': ['ssh-rsa xxx']}]}
-
-            debugLogging = json.dumps(debugConfig, separators=(',', ':'))
-            logger.debug(f"config ({len(debugLogging)}):")
-            logger.debug(debugLogging)
 
             # Serialize as JSON
             return json.dumps(config, separators=(',', ':'))
