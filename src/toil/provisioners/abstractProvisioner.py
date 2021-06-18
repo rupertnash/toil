@@ -546,7 +546,7 @@ class AbstractProvisioner(ABC):
         REBOOT_STRATEGY=off
         """))
 
-        # First we have volume mounting. That always happens.
+        # Then we have volume mounting. That always happens.
         self.addVolumesService(config)
         # We also always add the service to talk to Prometheus
         self.addNodeExporterService(config)
@@ -659,7 +659,7 @@ class AbstractProvisioner(ABC):
                 --path.procfs /host/proc \\
                 --path.sysfs /host/sys \\
                 --collector.filesystem.ignored-mount-points ^/(sys|proc|dev|host|etc)($|/)
-            
+
             [Install]
             WantedBy=multi-user.target
             '''))
@@ -785,6 +785,10 @@ class AbstractProvisioner(ABC):
 
         # We're going to ship the Kubelet service from Kubernetes' release pipeline via cloud-config
         config.addUnit("kubelet.service", contents=textwrap.dedent('''\
+            # This came from https://raw.githubusercontent.com/kubernetes/release/v0.4.0/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service
+            # It has been modified to replace /usr/bin with {DOWNLOAD_DIR}
+            # License: https://raw.githubusercontent.com/kubernetes/release/v0.4.0/LICENSE
+
             [Unit]
             Description=kubelet: The Kubernetes Node Agent
             Documentation=https://kubernetes.io/docs/home/
@@ -958,7 +962,7 @@ class AbstractProvisioner(ABC):
             # Systemd doesn't really let us say that in the unit file.
             systemctl start kubelet
 
-            # We also need to set the hostname for `kubeadm init` to work properly.
+            # We also need to set the hostname for 'kubeadm init' to work properly.
             /bin/sh -c "/usr/bin/hostnamectl set-hostname $(curl -s http://169.254.169.254/latest/meta-data/hostname)"
 
             kubeadm init --config /home/core/kubernetes-leader.yml
@@ -971,11 +975,12 @@ class AbstractProvisioner(ABC):
             kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/{FLANNEL_VERSION}/Documentation/kube-flannel.yml
 
             # Deploy rubber stamp CSR signing bot
-            kubectl apply -f https://raw.githubusercontent.com/kontena/kubelet-rubber-stamp/release/{RUBBER_STAMP_VERSION}/deploy/service_account.yaml
-            kubectl apply -f https://raw.githubusercontent.com/kontena/kubelet-rubber-stamp/release/{RUBBER_STAMP_VERSION}/deploy/role.yaml
-            kubectl apply -f https://raw.githubusercontent.com/kontena/kubelet-rubber-stamp/release/{RUBBER_STAMP_VERSION}/deploy/role_binding.yaml
-            kubectl apply -f https://raw.githubusercontent.com/kontena/kubelet-rubber-stamp/release/{RUBBER_STAMP_VERSION}/deploy/operator.yaml
+            base=https://raw.githubusercontent.com/kontena/kubelet-rubber-stamp/release/{RUBBER_STAMP_VERSION}/deploy
 
+            kubectl apply -f ${{base}}/service_account.yaml
+            kubectl apply -f ${{base}}/role.yaml
+            kubectl apply -f ${{base}}/role_binding.yaml
+            kubectl apply -f ${{base}}/operator.yaml
             ''').format(**values) + self.getKubernetesAutoscalerSetupCommands(values) + textwrap.dedent('''\
             # Set up metrics server, which needs serverTLSBootstrap and rubber stamp, and insists on running on a worker
             curl -sSL https://github.com/kubernetes-sigs/metrics-server/releases/download/{METRICS_API_VERSION}/components.yaml | \\
