@@ -785,10 +785,6 @@ class AbstractProvisioner(ABC):
 
         # We're going to ship the Kubelet service from Kubernetes' release pipeline via cloud-config
         config.addUnit("kubelet.service", contents=textwrap.dedent('''\
-            # This came from https://raw.githubusercontent.com/kubernetes/release/v0.4.0/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service
-            # It has been modified to replace /usr/bin with {DOWNLOAD_DIR}
-            # License: https://raw.githubusercontent.com/kubernetes/release/v0.4.0/LICENSE
-
             [Unit]
             Description=kubelet: The Kubernetes Node Agent
             Documentation=https://kubernetes.io/docs/home/
@@ -961,6 +957,9 @@ class AbstractProvisioner(ABC):
             # We need the kubelet being restarted constantly by systemd while kubeadm is setting up.
             # Systemd doesn't really let us say that in the unit file.
             systemctl start kubelet
+
+            # We also need to set the hostname for `kubeadm init` to work properly.
+            /bin/sh -c "/usr/bin/hostnamectl set-hostname $(curl -s http://169.254.169.254/latest/meta-data/hostname)"
 
             kubeadm init --config /home/core/kubernetes-leader.yml
 
